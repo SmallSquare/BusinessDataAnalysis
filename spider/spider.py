@@ -77,11 +77,9 @@ def getMovieShortComments(movieid, pages=1):
         comment_tags = bsObj.body.find('div', {'id': 'comments'}).find_all('div', {'class': 'comment-item'})
         for tag in comment_tags:
             commentList.append(tag.find('p').span.get_text())
-    print(commentList)
-    print(len(commentList))
-    for c in commentList:
-        print(c)
+
     return commentList
 
 
+getMoviesInfor(20)
 getMovieShortComments(30486586, 11)
