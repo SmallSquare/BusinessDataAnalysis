@@ -3,11 +3,11 @@
 # Code by SmallSquare, 2020/5.
 # Only for the course design of the Business Data Analysis.
 
-import time
 import requests
 import json
 import bs4
 import re
+import spider.get_proxy as get_proxy
 
 
 def getMoviesInfor(pages=1):
@@ -22,18 +22,22 @@ def getMoviesInfor(pages=1):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Chrome/71.0.3578.98 Safari/537.36'}
+    proxies = get_proxy.get_workable_ip()
+    print(proxies)
+
     session = requests.Session()
 
     # Get movies.
     for i in range(0, pages):
         r = session.get(
             "https://movie.douban.com/j/search_subjects?type=movie&tag=%E7%83%AD%E9%97%A8&sort=recommend&"
-            "page_limit=20&page_start=" + str(i),
-            headers=headers)
+            "page_limit=20&page_start=" + str(i * 20),
+            headers=headers, proxies=proxies)
+        print(r.text)
         jsondatum = json.loads(r.text)
         for movie in jsondatum['subjects']:
             moiveList.append(
-                {'title': movie['title'], 'rate': movie['rate'], 'id': movie['id'], 'title': movie['title']})
+                {'title': movie['title'], 'rate': movie['rate'], 'id': int(movie['id'])})
 
     print(moiveList)
     print(len(moiveList))
@@ -43,7 +47,7 @@ def getMoviesInfor(pages=1):
 def getMovieShortComments(movieid, pages=1):
     """
     This method can get short-comments.
-    :return:
+    :return: commentlist
     """
 
     commentList = []
@@ -52,11 +56,12 @@ def getMovieShortComments(movieid, pages=1):
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) '
                       'Chrome/71.0.3578.98 Safari/537.36'}
     session = requests.Session()
+    proxies = get_proxy.get_workable_ip()
 
     # First, try to get the total of comments.
     r = session.get(
         "https://movie.douban.com/subject/" + str(movieid) + "/comments?limit=20&sort=new_score&status=P&start=",
-        headers=headers)
+        headers=headers, proxies=proxies)
     bsObj = bs4.BeautifulSoup(r.text, "html.parser")
     numstr = bsObj.body.find('div', {'id': 'wrapper'}).find('ul', {'class': 'fleft CommentTabs'}) \
         .find('li', {'class': 'is-active'}).span.get_text()
@@ -81,5 +86,6 @@ def getMovieShortComments(movieid, pages=1):
     return commentList
 
 
-getMoviesInfor(20)
-getMovieShortComments(30486586, 11)
+if __name__ == '__main__':
+    getMoviesInfor(20)
+    # getMovieShortComments(30486586, 11)
