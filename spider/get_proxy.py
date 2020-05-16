@@ -1,9 +1,8 @@
 # coding=utf-8
-# Code is from the Internet, I only change some details.
-# Change by SmallSquare.
 
-# IP地址取自国内髙匿代理IP网站：http://www.xicidaili.com/nn/
-# 仅仅爬取首页IP地址就足够一般使用
+# Change by SmallSquare.
+# Source code is from the Internet, I changed many details.
+# IP地址取自国内免费髙匿代理IP网站：http://www.xicidaili.com/nn/
 
 from bs4 import BeautifulSoup
 import requests

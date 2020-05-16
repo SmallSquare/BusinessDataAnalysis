@@ -1,7 +1,6 @@
 # coding=utf-8
 
 # Code by SmallSquare, 2020/5.
-
 # An example that show how to prepare data before analysis.
 # 展示如何在数据分析之前获得数据。
 
