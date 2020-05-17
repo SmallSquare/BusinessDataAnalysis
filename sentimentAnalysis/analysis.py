@@ -12,7 +12,7 @@
 # 形式主义的种类：研究一部影片的风格、结构和技巧等形式的组织方式；
 # 意识形态：包含了政治、种族、阶级、性别、家庭等角度。
 
-#pip install jieba -i https://pypi.tuna.tsinghua.edu.cn/simple
+# pip install jieba -i https://pypi.tuna.tsinghua.edu.cn/simple
 import  numpy as np
 import  re
 import pickle
