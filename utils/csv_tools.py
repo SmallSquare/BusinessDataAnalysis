@@ -8,7 +8,6 @@ import pandas  as pd
 
 
 def dict_of_list_to_csv(list, out_file, attributes):
-
     """
     :param list:   [{'title': '真心半解', 'rate': '8.0', 'id': 33420285}, {'title': '利刃出鞘', 'rate': '8.2', 'id': 30318116}]
     :param out_file: file name
