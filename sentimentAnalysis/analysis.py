@@ -13,10 +13,12 @@
 # 意识形态：包含了政治、种族、阶级、性别、家庭等角度。
 
 # pip install jieba -i https://pypi.tuna.tsinghua.edu.cn/simple
-import  numpy as np
-import  re
+import numpy as np
+import re
 import pickle
-import  utils.native_bayes_tools as un
+import utils.native_bayes_tools as un
+
+
 # 短评 搜集的数据有：评论，（评分，有用个数）
 # 影评 搜集的数据有：影评，回应， 赞的数目， 踩的数目
 
@@ -67,7 +69,6 @@ class sentimentAnalysis(object):
         pos = result[0][1]
 
         print('差评： {} 好评： {}'.format(neg, pos))
-
 
 
 def main():

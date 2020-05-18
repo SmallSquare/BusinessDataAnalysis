@@ -2,6 +2,7 @@
 
 # Code by SmallSquare, 2020/5.
 # Provide an easy access to Mysql.
+import sys
 
 import chardet
 import pymysql
@@ -53,11 +54,11 @@ def insert_comment(commentlist, movie_id):
     # use method cursor() to get a 游标.
     cursor = db.cursor()
 
-    sql = "INSERT INTO comment(text, movie_id) VALUES (%s, %s)"
+    sql = "INSERT INTO comment(text, rate , movie_id) VALUES (%s, %s, %s)"
 
     try:
         for comment in commentlist:
-            cursor.execute(sql, (comment, movie_id))
+            cursor.execute(sql, (comment["comment"], comment["star"], movie_id))
             print(comment)
         db.commit()
     except Exception as e:
@@ -65,6 +66,7 @@ def insert_comment(commentlist, movie_id):
         db.rollback()
         print("Insert ERROR, so rollback.")
         print(e)
+        print(sys.exc_info())
 
     db.close()
 
@@ -110,8 +112,9 @@ def get_comments(movie_id):
             id = row[0]
             text = row[1]
             movie_id = row[2]
+            rate = row[3]
             # print("id=%s,text=%s,movie_id=%s" % (id, text, movie_id))
-            comment_list.append({"id": id, "text": text, "movie_id": movie_id})
+            comment_list.append({"id": id, "text": text, "movie_id": movie_id, "star": rate})
     except Exception as e:
         print("Unable to fetch data.")
 
