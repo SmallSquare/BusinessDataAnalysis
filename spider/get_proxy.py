@@ -42,11 +42,13 @@ def get_workable_ip():
                 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36'})
             if "异常请求" in res.text:
                 raise BufferError
+            print("Found a workable ip: " + str(proxies['http']))
             return proxies
         except Exception as e:
-            print("Try to test next proxy ip.")
+            print(ip + " is not workable. Try to test next proxy ip.")
             print(e)
     print("Fail to get a workable proxy ip, please try again.")
+    return None
 
 
 if __name__ == '__main__':
