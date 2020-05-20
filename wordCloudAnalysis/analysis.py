@@ -4,7 +4,7 @@
 # An example that show how to prepare data before wordCloudAnalysis.
 # 展示如何在数据分析之前获得数据。
 
-import spider.spider as spider
+import spider.spider_main as spider
 import database
 
 # Use spider like following.
