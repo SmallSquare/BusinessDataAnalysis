@@ -14,7 +14,7 @@ from keras.layers import Embedding, LSTM, Dense, Dropout
 from keras.optimizers import SGD
 from sklearn.model_selection import train_test_split
 
-from sentimentAnalysis.utils import svm_tools as us, common as uc
+from sentimentAnalysis.utils import  common as uc
 
 import matplotlib.pyplot as plt
 from matplotlib import font_manager
@@ -30,10 +30,22 @@ class LSTM_U(object):
         self.y_train = self.y_test = None
 
     def pro_precess(self):
-        self.data['cut_comment'] = self.data.comment.apply(uc.chinese_word_cut)
+        # self.data['cut_comment'] = self.data.comment.apply(uc.chinese_word_cut)
+        # X = self.data['comment']
+        self.data = self.data[(self.data['star'] == 50) | (self.data['star'] == 10) | (self.data['star'] == 30)]
         X = self.data['comment']
-        self.data['sentiment'] = ['positive' if (x > 30) else 'negtive' for x in self.data['star']]
+        # print(X)
+        # X = [i for i in self.data['comment'] if self.data['star'] == 50 or self.data['star'] == 10].toarray()
+        # print(X.shape)
+        # self.data['sentiment'] = ['positive' if (x > 30)  else 'negative' for x in self.data['star']]
+        self.data['sentiment'] = self.data.star.apply(uc.snow_result)
         y = self.data['sentiment']
+        print(self.data.head(10))
+        print('正向评论（5星）数目：%d' % (self.data[self.data.star > 30].shape[0]))
+        print('中立评论（3星）数目：%d' % (self.data[self.data.star == 30].shape[0]))
+        print('负向评论（1星）数目：%d' % (self.data[self.data.star < 30].shape[0]))
+        #
+        # ratings_with_opinions.sample(20)
 
         ##########################################################################
         # tokenizer = text.Tokenizer(num_words=300, lower=True, split=' ')
@@ -59,24 +71,24 @@ class LSTM_U(object):
 
         # 字典列表
         word_dictionary = {word: i + 1 for i, word in enumerate(vocabulary)}
-        with open('../model/word_dict.pk', 'wb') as f:
+        with open('../data/word_dict.pk', 'wb') as f:
             pickle.dump(word_dictionary, f)
         inverse_word_dictionary = {i + 1: word for i, word in enumerate(vocabulary)}
         label_dictionary = {label: i for i, label in enumerate(labels)}
-        with open('../model/label_dict.pk', 'wb') as f:
+        with open('../data/label_dict.pk', 'wb') as f:
             pickle.dump(label_dictionary, f)
         output_dictionary = {i: labels for i, labels in enumerate(labels)}
 
         self.vocab_size = len(word_dictionary.keys())  # 词汇表大小
         print('vocab size', self.vocab_size)
 
-        label_size = len(label_dictionary.keys())  # 标签类别数量
-        print('label size', label_size)
+        self.label_size = len(label_dictionary.keys())  # 标签类别数量
+        print('label size', self.label_size)
         # 序列填充，按input_shape填充，长度不足的按0补充
         X = [[word_dictionary[word] for word in sent] for sent in X]
         self.X = sequence.pad_sequences(maxlen=300, sequences=X, padding='post', value=0)
         y = [[label_dictionary[sent]] for sent in y]
-        y = [np_utils.to_categorical(label, num_classes=label_size) for label in y]
+        y = [np_utils.to_categorical(label, num_classes=self.label_size) for label in y]
         self.y = np.array([list(_[0]) for _ in y])
         print('X shape', self.X.shape)
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
@@ -123,11 +135,11 @@ class LSTM_U(object):
         self.model.add(LSTM(lstm_out, input_shape=(self.X.shape[0], self.X.shape[1])))
         # self.model.add(LSTM(lstm_out, input_shape=(self.train_vect.shape[0], self.train_vect.shape[1])))
         self.model.add(Dropout(0.2))
-        self.model.add(Dense(units=2, activation='softmax'))
+        self.model.add(Dense(units=self.label_size, activation='softmax'))
         self.model.compile(loss='categorical_crossentropy',
                         optimizer='adam',
                         metrics=['accuracy'])
-        # plot_model(self.model, to_file='../model/model_lstm.png', show_shapes=True)
+        plot_model(self.model, to_file='model_lstm_3_r.png', show_shapes=True)
         print(self.model.summary())
     #调整超参数，epoch, 数据集
     def train(self):
@@ -142,34 +154,48 @@ class LSTM_U(object):
         # print('Y train shape', self.y_train.shape)
         batch_size = 32
         print('##########################lstm start to evaluate##########################')
-        self.model.fit(self.X_train, self.y_train, batch_size=batch_size, epochs=1, verbose=1)
+        history = self.model.fit(self.X_train, self.y_train, batch_size=batch_size, epochs=5, verbose=1)
+
+
+        print(history.history.keys())
+        fig = plt.figure()
+        plt.plot(history.history['loss'])
+        # plt.plot(history.history['val_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='lower left')
+        #
+        fig.savefig('loss_3_r.png')
+        fig = plt.figure()
+        # plt.plot(history.history['loss'])
+        plt.plot(history.history['accuracy'])
+        plt.title('model accuracy')
+        plt.ylabel('accuracy')
+        plt.xlabel('epoch')
+        plt.legend(['train', 'test'], loc='upper left')
+        fig.savefig('accuracy_3_r.png')
         # self.model.fit(self.train_vect, Y, batch_size=batch_size, epochs=5, verbose=1)
         # self.model.train_on_batch(x_batch, y_batch)
-        #评估
-        # loss_and_metrics = self.model.evaluate(self.X_test, self.y_test, batch_size=batch_size)
-        # print('loss', loss_and_metrics)
-        # self.model.save('../model/lstm.h5')
+
         #预测
         # classes = model.predict(x_test, batch_size=128)
 
+    def test(self):
+        print('lstm start to evaluate on test dataset ')
+        batch_size = 32
+        loss_and_metrics = self.model.evaluate(self.X_test, self.y_test, batch_size=batch_size)
+        print('loss', loss_and_metrics)
 
+    def save_model(self):
+        print('save model')
+        self.model.save('../model/lstm_3_r.h5')
 
-
-def main():
-    data = '../data/comments.csv'
-    # draw(data)
-    lstm = LSTM_U(data)
-    lstm.pro_precess()
-    lstm.lstm()
-    lstm.train()
-
-
-def draw(data):
-
+    def draw(self):
         font = font_manager.FontProperties(fname='yahei.ttf')
-        data = pd.read_csv(data)
-        data['length'] = data['comment'].apply(lambda x: len(x))
-        len_df = data.groupby('length').count()
+        # data = pd.read_csv(data)
+        self.data['length'] = self.data['comment'].apply(lambda x: len(x))
+        len_df = self.data.groupby('length').count()
 
         # 句子长度
         sen_len = len_df.index.tolist()
@@ -181,10 +207,10 @@ def draw(data):
         # print(sen_freq)
         # print(len_df)
         plt.bar(sen_len, sen_freq)
-        plt.title("句子长度及出现频数统计图", fontproperties=font)
+        plt.title("句子长度及出现频数统计图(只有5和1星评论)", fontproperties=font)
         plt.xlabel("句子长度", fontproperties=font)
         plt.ylabel("句子长度出现的频数", fontproperties=font)
-        plt.savefig("句子长度及出现频数统计图.png")
+        plt.savefig("句子长度及出现频数统计图(只有5和1星评论).png")
         plt.close()
         # 绘制句子长度累积分布函数(CDF)
         sent_pentage_list = [(count / sum(sen_freq)) for count in accumulate(sen_freq)]
@@ -193,7 +219,7 @@ def draw(data):
         plt.plot(sen_len, sent_pentage_list)
 
         # 寻找分位点为quantile的句子长度
-        quantile = 0.91
+        quantile = 0.98
         # print(list(sent_pentage_list))
         for length, per in zip(sen_len, sent_pentage_list):
             if round(per, 2) == quantile:
@@ -207,11 +233,29 @@ def draw(data):
         plt.vlines(index, 0, quantile, colors="c", linestyles="dashed")
         plt.text(0, quantile, str(quantile))
         plt.text(index, 0, str(index))
-        plt.title("句子长度累积分布函数图", fontproperties=font)
+        plt.title("句子长度累积分布函数图(只有5和1星评论)", fontproperties=font)
         plt.xlabel("句子长度", fontproperties=font)
         plt.ylabel("句子长度累积频率", fontproperties=font)
-        plt.savefig("句子长度累积分布函数图.png")
+        plt.savefig("句子长度累积分布函数图(只有5和1星评论).png")
         plt.close()
+
+
+
+
+
+def main():
+    data = '../data/comments.csv'
+    # draw(data)
+    lstm = LSTM_U(data)
+    lstm.pro_precess()
+    lstm.lstm()
+    lstm.train()
+    lstm.test()
+    lstm.save_model()
+    # lstm.draw()
+
+
+
 if __name__ == '__main__':
 
     main()
