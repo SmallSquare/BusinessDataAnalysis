@@ -132,9 +132,11 @@ def svm_chinese_word_cut(sentence):
 
 def snow_result(txt):
     if txt > 30:
-        return 1
+        return 'positive'
+    elif txt == 30:
+        return 'neutral'
     else:
-        return 0
+        return 'negative'
 
 
 def model(data, model_path):

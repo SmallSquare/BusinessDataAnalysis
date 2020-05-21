@@ -6,14 +6,27 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import pickle
+
 import sklearn
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.naive_bayes import MultinomialNB, GaussianNB
+from sklearn.preprocessing import  StandardScaler
+from sklearn.pipeline import make_pipeline
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.model_selection import learning_curve
-from sklearn.ensemble import  RandomForestClassifier, AdaBoostClassifier
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn import metrics
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from xgboost import plot_importance
+
+from xgboost import XGBClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import MultinomialNB, GaussianNB
+from sklearn.ensemble import  RandomForestClassifier, AdaBoostClassifier, GradientBoostingClassifier, StackingClassifier
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn import tree, svm
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+
+
 from sentimentAnalysis.utils import common as uc
 
 
@@ -27,8 +40,17 @@ class ML(object):
         self.y_train = self.y_test = None
 
     def pro_process(self):
+        self.data = self.data[(self.data['star'] == 50) | (self.data['star'] == 10)]
+        # X = self.data['comment']
+        # print(X)
+        # X = [i for i in self.data['comment'] if self.data['star'] == 50 or self.data['star'] == 10].toarray()
+        # print(X.shape)
+        # self.data['sentiment'] = ['positive' if (x == 50) else 'negative' for x in self.data['star']]
+        # y = self.data['sentiment']
         self.data['cut_comment'] = self.data.comment.apply(uc.chinese_word_cut)
         X = self.data['cut_comment']
+        print('X shape', X.shape)
+        print(self.data.head(10))
         y = self.data.star
         self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
                                                         X, y,
@@ -85,11 +107,12 @@ class ML(object):
         plt.ylabel(score)
         plt.legend(loc='lower right')
         plt.title(model_name)
-        plt.savefig('MultinomialNB train number-size.png')
+        plt.savefig(model_name+'train number-size.png')
         plt.show()
 
 
-    def train(self):
+    def train(self, model_name):
+        print(model_name+ '  start to train')
         data = pd.read_csv('../data/Train_TF_IDF.csv',
                            encoding='utf-8')
         # data.info()
@@ -101,23 +124,25 @@ class ML(object):
         y_train = data['class'].values
 
         self.clf.fit(X_train, y_train)
+        print("**********************评测数据**********************")
         # AUC
         auc_scores = cross_val_score(self.clf, X_train, y_train, cv=5, scoring='roc_auc')
         # Accuracy
         accuracy_scores = cross_val_score(self.clf, X_train, y_train, cv=5, scoring='accuracy')
         #f1
-        f1_scores = cross_val_score(self.clf, X_train, y_train, cv=5, scoring='f1')
+        # f1_scores = cross_val_score(self.clf, X_train, y_train, cv=5, scoring='f1')
         print("(AUC/Accuracy)*************%0.4f/%0.4f" % (auc_scores.mean(),
                                                             accuracy_scores.mean()))
-        print("F1 Score*************%0.4f" % f1_scores.mean())
+        # print("F1 Score*************%0.4f" % f1_scores.mean())
 
-        # self.diagram('MultinomialNB', 'accuracy', X_train, y_train)
+        self.diagram(model_name, 'accuracy', X_train, y_train)
 
-    def test(self):
+    def test(self, model_name):
+        print(model_name+' start to test')
         data = pd.read_csv('../data/Test_TF_IDF.csv',
                            encoding='utf-8')
-        data.info()
-        data.describe()
+        # data.info()
+        # data.describe()
         # 数据和标签分开存放
         exc_cols = [u'class']
         cols = [c for c in data.columns if c not in exc_cols]
@@ -127,6 +152,7 @@ class ML(object):
 
         nb_result = self.clf.predict(X_test)
         # print(nb_result)
+        print("**********************评测数据**********************")
         print('Accuracy')
         print(accuracy_score(y_test, nb_result))
         print('Precision')
@@ -154,18 +180,102 @@ class ML(object):
 
 def main():
     data = '../data/comments.csv'
-    clf = MultinomialNB()
+    # clf = LogisticRegression(penalty='l2', solver='lbfgs')
+    # clf = KNeighborsClassifier()
+    # clf = DecisionTreeClassifier()
+    # clf = GradientBoostingClassifier(n_estimators=30)
+    # clf = LinearDiscriminantAnalysis()#线性判别分析
+    # clf = QuadraticDiscriminantAnalysis() #二次判别分析
+    # clf = MultinomialNB()
     # clf = GaussianNB()
     # clf = svm.SVC(probability=True, C=50, kernel='rbf', verbose=False, gamma='scale')
     # clf = svm.NuSVC(gamma='scale')
     # clf = RandomForestClassifier(n_estimators=30)
     # clf = AdaBoostClassifier(n_estimators=30)
+    clf = XGBClassifier(learning_rate=0.01,
+                        n_estimators=30,#树的个数
+                        max_depth=4,#树的深度
+                        min_child_weight=1,  # 叶子节点最小权重
+                        gamma=0.,  # 惩罚项中叶子结点个数前的参数
+                        subsample=1,  # 所有样本建立决策树
+                        colsample_btree=1,  # 所有特征建立决策树
+                        scale_pos_weight=1,  # 解决样本个数不平衡的问题
+                        random_state=27,  # 随机数
+                        slient=0
+                        )
     model = ML(data, clf)
     model.pro_process()
-    model.train()
-    model.test()
-    model.save_model('../model/MultinomialNB.pkl')
+    model.train('XGBClassifier')
+    model.test('XGBClassifier')
+    model.save_model('../model/XGBClassifier.pkl')
 
 
 if __name__ == '__main__':
     main()
+#SVC
+
+#LogisticRegression
+
+#KNeighborsClassifier
+
+#DecisionTreeClassifier
+# Accuracy
+# 0.8971848225214198
+# Precision
+# 0.9138386587714091
+# Recall
+# 0.868078626799557
+# F1 score
+# 0.8838309973593337
+#MultinomialNB
+# Accuracy
+# 0.7862097103223175
+# Precision
+# 0.8096797106061899
+# Recall
+# 0.7283130306386121
+# F1 score
+# 0.7425853623339453
+# saved done
+
+# GaussianNB
+# Accuracy
+# 0.7013463892288861
+# Precision
+# 0.7600195694716243
+# Recall
+# 0.7566445182724253
+# F1 score
+# 0.7013101431208496
+
+#NuSVC
+# Accuracy
+# 0.8890248878008976
+# Precision
+# 0.9090896778610089
+# Recall
+# 0.8565430047988187
+# F1 score
+# 0.8736496413447412
+# saved done
+
+
+#RandomForestClassifier_30
+# Accuracy
+# 0.8963688290493677
+# Precision
+# 0.9154224854378397
+# Recall
+# 0.8658176448874123
+# F1 score
+# 0.8824649521064984
+
+#AdaBoostClassifier_30
+# Accuracy
+# 0.7164422684618523
+# Precision
+# 0.7757349114889349
+# Recall
+# 0.6250922849760059
+# F1 score
+# 0.6158987211618789
